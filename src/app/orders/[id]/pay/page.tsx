@@ -159,7 +159,7 @@ export default function PayDepositPage() {
               href="/profile?tab=wallet"
               className="block w-full py-3 bg-blue-500 text-white rounded-xl font-bold text-lg text-center"
             >
-              已知晓，前往钱包充值
+              已知晓，前往联系客服充值
             </Link>
 
             <p className="text-xs text-gray-400 mt-3">
