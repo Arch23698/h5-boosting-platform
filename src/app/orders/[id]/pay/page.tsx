@@ -29,10 +29,13 @@ export default function PayDepositPage() {
    * 联系客服 - 创建会话并跳转
    */
   const handleContactKefu = async () => {
-    if (!order) return;
+    if (!order) {
+      window.location.href = '/chat';
+      return;
+    }
 
     try {
-      const res = await fetch('/api/chat', {
+      await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -40,15 +43,12 @@ export default function PayDepositPage() {
           message: `您好，关于订单"${order.title}"的保障金支付问题，我想联系客服咨询。`,
         }),
       });
-
-      if (res.ok || res.status === 400) {
-        // 跳转聊天页面
-        router.push('/chat');
-      }
     } catch (error) {
       console.error('联系客服失败:', error);
-      router.push('/chat');
     }
+
+    // 使用 window.location.href 确保跳转
+    window.location.href = '/chat';
   };
 
   useEffect(() => {
