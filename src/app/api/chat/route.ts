@@ -49,6 +49,42 @@ export async function GET() {
         },
         orderBy: { updatedAt: 'desc' },
       });
+
+      // 如果打手没有任何会话，自动创建一个通用会话
+      if (sessions.length === 0) {
+        const newSession = await prisma.chatSession.create({
+          data: {
+            orderId: 'general',
+            boosterId: user.userId,
+            adminId: null,
+            lastMessage: '您好，我想联系客服咨询问题',
+          },
+        });
+
+        // 发送系统消息
+        await prisma.message.create({
+          data: {
+            content: '您好，我想联系客服咨询问题',
+            sessionId: newSession.id,
+            senderId: user.userId,
+            receiverId: '',
+          },
+        });
+
+        // 重新获取会话列表
+        sessions = await prisma.chatSession.findMany({
+          where: { boosterId: user.userId },
+          include: {
+            booster: { select: { id: true, name: true } },
+            admin: { select: { id: true, name: true } },
+            order: { select: { id: true, title: true, orderNo: true } },
+            _count: {
+              select: { messages: { where: { isRead: false, receiverId: user.userId } } }
+            }
+          },
+          orderBy: { updatedAt: 'desc' },
+        });
+      }
     }
 
     return NextResponse.json({ sessions });
