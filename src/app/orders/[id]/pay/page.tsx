@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
 
 /**
  * 支付保证金页面
@@ -25,6 +24,32 @@ export default function PayDepositPage() {
   const [paid, setPaid] = useState(false);
   const router = useRouter();
   const params = useParams();
+
+  /**
+   * 联系客服 - 创建会话并跳转
+   */
+  const handleContactKefu = async () => {
+    if (!order) return;
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: order.id,
+          message: `您好，关于订单"${order.title}"的保障金支付问题，我想联系客服咨询。`,
+        }),
+      });
+
+      if (res.ok || res.status === 400) {
+        // 跳转聊天页面
+        router.push('/chat');
+      }
+    } catch (error) {
+      console.error('联系客服失败:', error);
+      router.push('/chat');
+    }
+  };
 
   useEffect(() => {
     fetchOrder();
@@ -155,12 +180,12 @@ export default function PayDepositPage() {
             </p>
 
             {/* 前往充值按钮 */}
-            <Link
-              href="/profile?tab=wallet"
+            <button
+              onClick={handleContactKefu}
               className="block w-full py-3 bg-blue-500 text-white rounded-xl font-bold text-lg text-center"
             >
               已知晓，前往联系客服充值
-            </Link>
+            </button>
 
             <p className="text-xs text-gray-400 mt-3">
               充值后返回此页面继续接单
@@ -184,14 +209,12 @@ export default function PayDepositPage() {
               <p className="font-medium text-gray-800">支付遇到问题？</p>
               <p className="text-xs text-gray-400">联系客服获取帮助</p>
             </div>
-            <a
-              href="https://example.com/kefu"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={handleContactKefu}
               className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm"
             >
               联系客服
-            </a>
+            </button>
           </div>
         </div>
       </main>
