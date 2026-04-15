@@ -35,7 +35,7 @@ export default function PayDepositPage() {
     }
 
     try {
-      await fetch('/api/chat', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -43,12 +43,19 @@ export default function PayDepositPage() {
           message: `您好，关于订单"${order.title}"的保障金支付问题，我想联系客服咨询。`,
         }),
       });
+
+      if (res.ok) {
+        const data = await res.json();
+        // 跳转到具体会话页面
+        window.location.href = `/chat/${data.session.id}`;
+      } else {
+        // 如果创建失败，直接跳转聊天页面
+        window.location.href = '/chat';
+      }
     } catch (error) {
       console.error('联系客服失败:', error);
+      window.location.href = '/chat';
     }
-
-    // 使用 window.location.href 确保跳转
-    window.location.href = '/chat';
   };
 
   useEffect(() => {
