@@ -354,8 +354,8 @@ export default function Home() {
       {activeTab === 'orders' && (
         <>
           {/* 游戏筛选栏 */}
-          <div className="bg-white border-b px-4 py-3 overflow-x-auto scrollbar-hide">
-            <div className="flex gap-3 min-w-max">
+          <div className="bg-white border-b">
+            <div className="flex gap-3 px-4 py-3 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
               <button
                 onClick={() => setSelectedGameId('')}
                 className={`flex flex-col items-center gap-1 transition ${
