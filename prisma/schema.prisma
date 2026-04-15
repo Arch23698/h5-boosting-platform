@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 用户表 ====================
+model User {
+  id            String        @id @default(cuid())
+  name          String        @unique           // 用户名唯一
+  password      String                          // 密码（加密存储）
+  phone         String?                          // 手机号
+  idCard        String?       @unique            // 身份证号（唯一）
+  role          String        @default("BOOSTER") // BOOSTER(打手) / ADMIN(管理员)
+  adminLevel    Int           @default(0)        // 管理员等级: 0=打手, 1=小管理员, 2=超级管理员
+  canManageRecharge Boolean   @default(false)   // 是否可以管理充值配置
+  canManageOrders    Boolean  @default(false)   // 是否可以管理订单（添加/删除/修改状态/时间）
+  canManageChat      Boolean  @default(false)   // 是否可以管理客服聊天（删除记录）
+  kefuLink      String?                          // 客服链接（管理员专属）
+  balance       Float         @default(0)        // 账户余额（单位：元）
+  orders        Order[]       @relation("PlayerOrders")
+  boostedOrders Order[]       @relation("BoosterOrders")
+  transactions  Transaction[]                     // 交易记录
+  sentMessages  Message[]     @relation("SentMessages")   // 发送的消息
+  receivedMessages Message[]  @relation("ReceivedMessages") // 收到的消息
+  boosterChats  ChatSession[] @relation("BoosterChats")    // 作为打手的聊天
+  adminChats    ChatSession[] @relation("AdminChats")      // 作为客服的聊天
+  createdAt     DateTime      @default(now())
+}
+
+// ==================== 游戏表 ====================
+model Game {
+  id     String  @id @default(cuid())
+  name   String
+  orders Order[]
+}
+
+// ==================== 订单表 ====================
+model Order {
+  id            String     @id @default(cuid())
+  orderNo       String     @unique                     // 订单编号（自动生成）
+  title         String
+  price         Float                                  // 订单金额（打手完成后获得的报酬）
+  status        String     @default("OPEN")            // OPEN: 待接单, PENDING_PAY_CONFIRM: 待确认支付, TAKEN: 进行中, SUBMITTED: 待验收, DONE: 已完成, DISPUTED: 争议中
+  gameId        String
+  game          Game       @relation(fields: [gameId], references: [id])
+  playerId      String
+  player        User       @relation("PlayerOrders", fields: [playerId], references: [id])
+  boosterId     String?
+  booster       User?      @relation("BoosterOrders", fields: [boosterId], references: [id])
+
+  // 保证金相关字段
+  deposit       Float      @default(0)                 // 保证金金额（打手需缴纳）
+  depositStatus String     @default("NONE")            // NONE: 无需缴纳, PENDING: 待缴纳, PAID: 已缴纳, FROZEN: 已冻结, RETURNED: 已退还, FORFEITED: 已没收
+
+  // 订单详情字段
+  server        String?                                // 所在区服
+  requirements  String?    @db.Text                    // 代练要求/接单攻略
+  securityDeposit Float    @default(0)                 // 安全保障金
+  efficiencyDeposit Float  @default(0)                 // 效率保障金
+  requiredHours Int?                                   // 需求时间（小时）
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // 关联交易记录
+  transactions  Transaction[]
+  chatSessions  ChatSession[]
+}
+
+// ==================== 交易记录表 ====================
+model Transaction {
+  id          String   @id @default(cuid())
+  type        String                          // DEPOSIT: 充值, WITHDRAW: 提现, FREEZE: 冻结保证金, UNFREEZE: 解冻保证金, REWARD: 获得报酬, FORFEIT: 没收保证金
+  amount      Float                           // 交易金额
+  status      String   @default("SUCCESS")    // PENDING: 处理中, SUCCESS: 成功, FAILED: 失败
+  description String?                         // 交易描述
+  userId      String                          // 关联用户
+  user        User     @relation(fields: [userId], references: [id])
+  orderId     String?                         // 关联订单（可选）
+  order       Order?   @relation(fields: [orderId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+// ==================== 聊天会话表 ====================
+model ChatSession {
+  id          String    @id @default(cuid())
+  orderId     String                         // 关联订单
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  boosterId   String                         // 打手ID
+  booster     User      @relation("BoosterChats", fields: [boosterId], references: [id])
+  adminId     String?                        // 客服管理员ID
+  admin       User?     @relation("AdminChats", fields: [adminId], references: [id])
+  status      String    @default("ACTIVE")   // ACTIVE: 进行中, CLOSED: 已关闭
+  lastMessage String?                        // 最后一条消息内容（用于列表显示）
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  messages    Message[]
+}
+
+// ==================== 消息表 ====================
+model Message {
+  id          String      @id @default(cuid())
+  content     String      @db.Text           // 消息内容
+  sessionId   String                         // 关联会话
+  session     ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  senderId    String                         // 发送者ID
+  sender      User        @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId  String?                        // 接收者ID（可选，用于群发场景）
+  receiver    User?       @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  isRead      Boolean     @default(false)    // 是否已读
+  createdAt   DateTime    @default(now())
+}
+
+// ==================== 系统配置表 ====================
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique                 // 配置键
+  value       String?                        // 配置值
+  description String?                        // 配置描述
+  updatedAt   DateTime @updatedAt
+}
