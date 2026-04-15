@@ -83,7 +83,7 @@ export async function POST(request: Request) {
 
     // 检查手机号是否已被使用（如果提供了手机号）
     if (phone) {
-      const existingPhone = await prisma.user.findUnique({
+      const existingPhone = await prisma.user.findFirst({
         where: { phone },
       });
       if (existingPhone) {
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
 
     // 检查身份证号是否已被使用（如果提供了身份证号）
     if (idCard) {
-      const existingIdCard = await prisma.user.findUnique({
+      const existingIdCard = await prisma.user.findFirst({
         where: { idCard },
       });
       if (existingIdCard) {
