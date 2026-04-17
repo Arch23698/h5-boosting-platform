@@ -8,8 +8,6 @@ import { NextResponse } from 'next/server';
 import prisma from '@/app/lib/prisma';
 import { getCurrentUser } from '@/app/lib/auth';
 
-const UPLOAD_DIR = 'public/uploads';
-
 /**
  * GET /api/admin/config/recharge
  * 获取充值配置
@@ -61,30 +59,20 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: '请上传图片文件' }, { status: 400 });
       }
 
-      // 生成唯一文件名
-      const ext = file.name.split('.').pop();
-      const filename = `recharge_qrcode_${Date.now()}.${ext}`;
-      const filepath = `${UPLOAD_DIR}/${filename}`;
-
-      // 读取文件并保存
+      // 读取文件并转换为 Base64
       const buffer = Buffer.from(await file.arrayBuffer());
-      const fs = require('fs');
+      const base64 = buffer.toString('base64');
+      const mimeType = file.type;
+      const dataUrl = `data:${mimeType};base64,${base64}`;
 
-      // 确保目录存在
-      if (!fs.existsSync(UPLOAD_DIR)) {
-        fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-      }
-
-      fs.writeFileSync(filepath, buffer);
-
-      // 保存配置到数据库
+      // 保存配置到数据库（存储 Base64 数据）
       await prisma.systemConfig.upsert({
         where: { key: 'recharge_qrcode' },
-        update: { value: `/uploads/${filename}` },
-        create: { key: 'recharge_qrcode', value: `/uploads/${filename}`, description: '充值二维码' },
+        update: { value: dataUrl },
+        create: { key: 'recharge_qrcode', value: dataUrl, description: '充值二维码' },
       });
 
-      return NextResponse.json({ qrcode: `/uploads/${filename}` });
+      return NextResponse.json({ qrcode: dataUrl });
     }
 
     if (action === 'toggle_enabled') {
